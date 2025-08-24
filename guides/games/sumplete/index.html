@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="ru">
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sumplete — головоломка сумм — Copy65</title>
+  <meta name="description" content="Удаляйте числа так, чтобы сумма оставшихся в каждой строке и столбце равнялась целевым значениям.">
+  <meta name="theme-color" content="#e9552a">
+  <link rel="icon" href="../../../assets/img/favicon.svg">
+  <link rel="stylesheet" href="../../../assets/css/styles.css">
+  <meta property="og:title" content="Sumplete — головоломка сумм — Copy65">
+  <meta property="og:description" content="Удаляйте числа так, чтобы сумма оставшихся в каждой строке и столбце равнялась целевым значениям.">
+  <meta property="og:type" content="website">
+
+  <style>
+    .game-wrap {
+      --ok: #2a9d8f;
+      --bad: #e63946;
+      width:100%;
+      max-width:900px;
+      display:flex;
+      flex-direction:column;
+      gap:14px; 
+      margin: 0 auto;
+    }
+    .game-wrap .card{
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius:16px;
+      padding:16px;
+    }
+    .game-wrap .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .game-wrap .controls label{display:flex;align-items:center;gap:8px;background: color-mix(in srgb, var(--fg) 5%, transparent);padding:8px 10px;border-radius:10px}
+    .game-wrap .btn{appearance:none;border:0;border-radius:12px;padding:10px 14px;background:var(--fg);color:var(--bg);font-weight:600; cursor: pointer; text-decoration: none; display: inline-block;}
+    .game-wrap .btn.brand{background:var(--accent);color:#fff;}
+    .game-wrap .btn.ghost{background: color-mix(in srgb, var(--fg) 8%, transparent); color: var(--fg);}
+    .game-wrap .grid{overflow:auto}
+    .game-wrap table{border-collapse:separate;border-spacing:6px;margin:8px auto}
+    .game-wrap td,
+    .game-wrap th {
+      width:48px;
+      height:48px;
+      text-align:center;
+      font-weight:700;
+      border-radius:12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 14px rgba(0,0,0,.06);
+    }
+    .game-wrap td{cursor:pointer;font-size:20px;user-select:none;position:relative}
+    .game-wrap td.deleted{color:var(--muted);text-decoration:line-through;background: color-mix(in srgb, var(--bg) 50%, var(--card) 50%);}
+    .game-wrap td.solved{background:#e9fff6} /* Оставим цветным для акцента победы */
+    .game-wrap th{
+      background: color-mix(in srgb, var(--fg) 5%, transparent);
+      font-size:18px;
+      font-weight:800;
+      color: var(--fg);
+    }
+    .game-wrap th.ok{background:#e7f7f1;color:#116149} /* Семантические цвета оставим */
+    .game-wrap th.bad{background:#ffe9e9;color:#7a0f0f}
+    .game-wrap .legend{color:var(--muted);font-size:14px}
+    .game-wrap .game-footer{text-align:center;color:var(--muted); margin-top: 10px;}
+    @media (max-width:520px){ .game-wrap td,.game-wrap th{width:42px;height:42px} }
+  </style>
+
+</head>
+<body data-slug="guides/games/sumplete" data-depth="3">
+  <header id="site-header"></header>
+  <main class="container">
+    <h1>Sumplete — головоломка сумм</h1>
+    
+    <div class="game-wrap">
+      <div class="card controls">
+        <label>Размер
+          <select id="size"><option>4</option><option selected>5</option><option>6</option><option>7</option></select>
+        </label>
+        <label>Сложность
+          <select id="density" title="Доля чисел, которые должны остаться">
+            <option value="0.35">Лёгкая</option>
+            <option value="0.45" selected>Средняя</option>
+            <option value="0.55">Сложная</option>
+          </select>
+        </label>
+        <button class="btn brand" id="new">Новая игра</button>
+        <button class="btn ghost" id="hint">Подсказка</button>
+        <button class="btn ghost" id="reveal">Решение</button>
+        <span class="legend">Кликайте по клеткам, чтобы вычеркнуть число.</span>
+      </div>
+    
+      <div class="card grid">
+        <table id="board" aria-label="Игровое поле"></table>
+      </div>
+    
+      <div class="game-footer">Без куки и LocalStorage. Сгенерировано локально в браузере.</div>
+    </div>
+
+  </main>
+  <footer id="site-footer"></footer>
+  
+  <script>
+  (()=>{
+    const rnd = (n)=>Math.floor(Math.random()*n);
+  
+    function makePuzzle(n=5, keepRatio=0.45){
+      const A = Array.from({length:n}, _=> Array.from({length:n}, _=> 1 + rnd(9)));
+      const keep = Array.from({length:n}, _=> Array.from({length:n}, _=> false));
+      const want = Math.max(1, Math.round(n*n*keepRatio));
+      let chosen = 0;
+      for(let i=0;i<n;i++){ const j=rnd(n); if(!keep[i][j]){ keep[i][j]=true; chosen++; } }
+      for(let j=0;j<n;j++){ const i=rnd(n); if(!keep[i][j]){ keep[i][j]=true; chosen++; } }
+      while(chosen < want){ const i=rnd(n), j=rnd(n); if(!keep[i][j]){ keep[i][j]=true; chosen++; } }
+      const rowTarget = Array.from({length:n}, (_,i)=> A[i].reduce((s,v,j)=> s + (keep[i][j]?v:0), 0));
+      const colTarget = Array.from({length:n}, (_,j)=> A.reduce((s,row,i)=> s + (keep[i][j]?row[j]:0), 0));
+      return {n, A, keep, rowTarget, colTarget};
+    }
+  
+    const board = document.getElementById('board');
+    let P = null, state = null;
+  
+    function draw(){
+      const n = P.n; board.innerHTML='';
+      const thead = document.createElement('tr');
+      thead.appendChild(document.createElement('th'));
+      for(let j=0;j<n;j++){ const th=document.createElement('th'); th.textContent=P.colTarget[j]; th.id='c'+j; board.appendChild(thead).appendChild(th); }
+      for(let i=0;i<n;i++){
+        const tr=document.createElement('tr');
+        const thL=document.createElement('th'); thL.textContent=P.rowTarget[i]; thL.id='r'+i; tr.appendChild(thL);
+        for(let j=0;j<n;j++){
+          const td=document.createElement('td'); td.textContent=P.A[i][j]; td.dataset.i=i; td.dataset.j=j;
+          td.addEventListener('click', toggle); tr.appendChild(td);
+        }
+        board.appendChild(tr);
+      }
+      refresh();
+    }
+  
+    function toggle(e){
+      const i=+e.currentTarget.dataset.i, j=+e.currentTarget.dataset.j;
+      state[i][j] = !state[i][j]; refresh();
+    }
+  
+    function refresh(){
+      const n=P.n, rowSum=Array(n).fill(0), colSum=Array(n).fill(0);
+      for(let i=0;i<n;i++) for(let j=0;j<n;j++){
+        const td=board.querySelector(`td[data-i="${i}"][data-j="${j}"]`);
+        td.classList.toggle('deleted', !state[i][j]);
+        if(state[i][j]){ rowSum[i]+=P.A[i][j]; colSum[j]+=P.A[i][j]; }
+      }
+      for(let j=0;j<n;j++){ const th=document.getElementById('c'+j); th.classList.remove('ok','bad');
+        if(colSum[j]===P.colTarget[j]) th.classList.add('ok'); else if(colSum[j]>P.colTarget[j]) th.classList.add('bad'); }
+      for(let i=0;i<n;i++){ const th=document.getElementById('r'+i); th.classList.remove('ok','bad');
+        if(rowSum[i]===P.rowTarget[i]) th.classList.add('ok'); else if(rowSum[i]>P.rowTarget[i]) th.classList.add('bad'); }
+      const win = rowSum.every((s,i)=>s===P.rowTarget[i]) && colSum.every((s,j)=>s===P.colTarget[j]);
+      board.querySelectorAll('td').forEach(td=> td.classList.toggle('solved', win && state[+td.dataset.i][+td.dataset.j]));
+    }
+  
+    function newGame(){
+      const n=+document.getElementById('size').value;
+      const keepRatio=+document.getElementById('density').value;
+      P=makePuzzle(n, keepRatio);
+      state=Array.from({length:n}, _=> Array.from({length:n}, _=> true));
+      draw();
+    }
+  
+    function hint(){
+      const cells=[];
+      for(let i=0;i<P.n;i++) for(let j=0;j<P.n;j++){
+        if(state[i][j]!==P.keep[i][j]) cells.push([i,j]);
+      }
+      if(cells.length===0) return;
+      const [i,j]=cells[Math.floor(Math.random()*cells.length)];
+      state[i][j]=P.keep[i][j];
+      const td=board.querySelector(`td[data-i="${i}"][data-j="${j}"]`);
+      td.style.transition='background 150ms'; td.style.background='#fff6e5'; setTimeout(()=>td.style.background='',180);
+      refresh();
+    }
+    function reveal(){ for(let i=0;i<P.n;i++) for(let j=0;j<P.n;j++) state[i][j]=P.keep[i][j]; refresh(); }
+  
+    document.getElementById('new').onclick=newGame;
+    document.getElementById('hint').onclick=hint;
+    document.getElementById('reveal').onclick=reveal;
+  
+    newGame();
+  })();
+  </script>
+
+  <script src="../../../assets/js/site.js"></script>
+</body>
+</html>

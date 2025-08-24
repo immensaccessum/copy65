@@ -1,0 +1,190 @@
+:root {
+  --bg: #ffffff;
+  --fg: #111111;
+  --muted: #666666;
+  --card: #ffffff;
+  --border: #e6e6e6;
+  --accent: #e9552a;
+  --accent2: #2a8fe9;
+  --lh: 1.6;
+  --col: 78ch;
+  --glass: color-mix(in srgb, var(--bg) 65%, transparent);
+  --glass-border: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --bg: #0b0b0b;
+    --fg: #e6e6e6;
+    --muted: #a1a1a1;
+    --card: #151515;
+    --border: #2a2a2a;
+    --glass: color-mix(in srgb, var(--bg) 40%, transparent);
+    --glass-border: color-mix(in srgb, var(--fg) 12%, transparent);
+  }
+}
+html[data-theme="dark"] {
+  --bg: #0b0b0b;
+  --fg: #e6e6e6;
+  --muted: #a1a1a1;
+  --card: #151515;
+  --border: #2a2a2a;
+  --glass: color-mix(in srgb, var(--bg) 40%, transparent);
+  --glass-border: color-mix(in srgb, var(--fg) 12%, transparent);
+}
+html[data-theme="light"] {
+  --bg: #ffffff;
+  --fg: #111111;
+  --muted: #666666;
+  --card: #ffffff;
+  --border: #e6e6e6;
+  --glass: color-mix(in srgb, var(--bg) 65%, transparent);
+  --glass-border: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+
+html { color-scheme: light; }
+@media (prefers-color-scheme: dark) { html:not([data-theme]) { color-scheme: dark; } }
+html[data-theme="dark"] { color-scheme: dark; }
+html[data-theme="light"] { color-scheme: light; }
+
+* { box-sizing: border-box; }
+html { font: 16px/var(--lh) -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; }
+body { margin: 0; background: var(--bg); color: var(--fg); }
+a { color: inherit; text-decoration: underline; text-underline-offset: .2em; }
+
+.container { max-width: var(--col); margin-inline: auto; padding: 1lh; }
+
+/* Glass header */
+header {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--glass-border);
+}
+.topbar { display: grid; grid-template-columns: 1fr auto; align-items: start; gap: 12px; }
+
+/* ИЗМЕНЕНИЯ ЗДЕСЬ */
+.brand-wrap { display: flex; align-items: baseline; gap: 1ch; } /* Убрали flex-wrap */
+.brand { font-weight: 800; letter-spacing: .2px; flex-shrink: 0; } /* Добавили flex-shrink, чтобы логотип не сжимался */
+.brand .dot { color: var(--accent); }
+.tagline { 
+  color: var(--muted); 
+  white-space: nowrap; /* Запрещаем перенос текста на новую строку */
+  font-size: clamp(0.65rem, 2.5vw, 0.95rem); /* Динамический размер шрифта */
+}
+
+.actions { 
+  display: flex; 
+  align-items: center; 
+  gap: 8px;
+  position: relative;
+}
+
+.nav-toggle, .theme-toggle { 
+  display: inline-flex; 
+  background: none; 
+  border: 1px solid var(--border); 
+  border-radius: 10px; 
+  padding: .4em .6em; 
+  cursor: pointer;
+}
+.nav-toggle:focus, .theme-toggle:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.nav {
+  display: none; 
+  position: absolute; 
+  right: 0;
+  top: calc(100% + 8px); 
+  flex-direction: column;
+  background: var(--card); 
+  border: 1px solid var(--border); 
+  border-radius: 12px; 
+  padding: 8px; 
+  min-width: 220px;
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--fg) 15%, transparent);
+}
+.nav.open { display: flex; }
+.nav a { text-decoration: none; border-radius: 10px; padding: .5em .7em; }
+.nav a:hover { background: color-mix(in srgb, var(--fg) 5%, transparent); }
+
+footer {
+  border-top: 1px solid var(--border);
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.muted { color: var(--muted); }
+
+h1 { font-size: clamp(2rem, 4vw, 2.6rem); line-height: 1.25; margin: 1.5lh 0 1lh; }
+h2 { font-size: clamp(1.35rem, 3vw, 1.85rem); line-height: 1.3; margin: 1.25lh 0 .75lh; }
+main > * { margin-block: 1lh; }
+ul { padding-inline-start: 2ch; }
+
+.grid { display: grid; gap: 18px; margin: 18px 0; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px; padding: 16px;
+}
+.card h3 { margin: .2em 0 .5em; font-size: 20px; }
+
+.badge { display: inline-block; font-size: .85rem; padding: .2em .55em; border-radius: 999px; border: 1px solid var(--accent); color: var(--accent); }
+.btn { display: inline-flex; align-items: center; gap: .6em; padding: .6em .9em; border-radius: 12px; text-decoration: none; font-weight: 700; border: 1px solid var(--accent); color: var(--accent); }
+.btn:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn.primary:hover { filter: brightness(.95); }
+
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td { border: 1px solid var(--border); padding: .6em .7em; text-align: left; }
+.table th { background: color-mix(in srgb, var(--fg) 8%, transparent); }
+
+.sample { width: 100%; aspect-ratio: 4/3; background: linear-gradient(135deg, color-mix(in srgb, var(--fg) 8%, transparent), color-mix(in srgb, var(--fg) 2%, transparent)); border: 1px dashed var(--border); border-radius: 12px; display: grid; place-items: center; color: var(--muted); }
+
+/* Styles for details/summary accordion on services page */
+details > summary {
+  cursor: pointer;
+  list-style: none; /* Remove default marker */
+}
+details > summary::-webkit-details-marker {
+  display: none; /* Remove default marker in Chrome/Safari */
+}
+details > summary h2 {
+  display: inline-block; /* Allows the h2 to sit next to the custom marker */
+  margin: 1.5rem 0 0.5rem;
+}
+details > summary h2::before {
+  content: '► '; /* Custom marker (closed) */
+  font-size: 0.8em;
+  padding-right: 8px;
+  color: var(--muted);
+  transition: transform 0.2s ease-in-out;
+  display: inline-block;
+}
+details[open] > summary h2::before {
+  content: '▼ '; /* Custom marker (open) */
+}
+details .table {
+    margin-top: 0;
+}
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* Для плавной прокрутки на iOS */
+  margin: 1lh 0;
+}
+
+/* Корректировка для таблиц внутри спойлеров */
+details .table-wrap {
+  margin-top: 0;
+}
+/* Стили для кликабельного слогана в шапке */
+.tagline a {
+  color: inherit; /* Наследуем цвет (.muted) от родителя */
+  text-decoration: none; /* Убираем подчеркивание */
+}
+
+/* Добавляем подчеркивание при наведении для обратной связи */
+.tagline a:hover {
+  text-decoration: underline;
+  text-underline-offset: .2em;
+}

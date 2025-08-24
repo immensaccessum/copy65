@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Generative Worlds</title>
+    <style>
+        html, body { overscroll-behavior-y: contain; }
+        body { margin: 0; padding: 0; overflow: hidden; background-color: #000; color: #ccc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; }
+        #main-canvas { display: block; width: 100vw; height: 100vh; touch-action: none; cursor: crosshair;}
+        #top-right-controls { position: fixed; top: 15px; right: 15px; display: flex; gap: 10px; z-index: 10; }
+        .icon-btn { background-color: rgba(30,30,30,0.7); padding: 8px; border-radius: 50%; width: 18px; height: 18px; fill: #c9d1d9; cursor: pointer; transition: background-color 0.2s; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
+        .icon-btn:hover { background-color: rgba(50,50,50,0.9); }
+        .ui-panel { position: fixed; left: 15px; bottom: 15px; padding: 10px 15px; background-color: rgba(30,30,30,0.8); border-radius: 12px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); font-size: 14px; min-width: 200px; max-width: calc(100vw - 30px); }
+        #ui-toggle { cursor: pointer; font-weight: 500; text-align: center; user-select: none; padding-bottom: 5px; }
+        #ui-content { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; max-height: 60vh; transition: max-height 0.4s ease-in-out, opacity 0.3s ease-in-out, margin-top 0.4s ease-in-out, padding-top 0.4s ease-in-out, border-top 0.4s; opacity: 1; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; padding-right: 5px; }
+        .ui-panel.collapsed #ui-content { max-height: 0; opacity: 0; margin-top: 0; border-top: none; padding-top: 0; }
+        .ui-panel label { color: #aaa; font-size: 12px; }
+        .ui-panel select, .ui-panel input[type="range"] { background-color: #333; color: #eee; border: 1px solid #555; border-radius: 5px; padding: 4px; width: 100%; box-sizing: border-box;}
+        .ui-checkbox { display: flex; align-items: center; gap: 8px; color: #ddd; cursor: pointer; }
+        .ui-checkbox label { cursor: pointer; color: #ddd; }
+        #info-link { position: fixed; top: 15px; left: 15px; padding: 8px 12px; background-color: rgba(30,30,30,0.7); color: #c9d1d9; text-decoration: none; border-radius: 20px; font-size: 14px; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); z-index: 10; }
+        #info-link:hover { background-color: rgba(50,50,50,0.9); }
+        #controls-hint { position: fixed; bottom: 10px; right: 15px; font-size: 12px; color: rgba(255,255,255,0.3); pointer-events: none; text-align: right; }
+        .control-group { display: flex; flex-direction: column; gap: 10px; }
+    </style>
+</head>
+<body data-slug="guides/games/convoy" data-depth="3">
+    <link rel="icon" href="../../../assets/img/favicon.svg">
+    <a id="info-link" href="../../../">На главную</a>
+    <div id="top-right-controls">
+        <svg id="mute-btn" class="icon-btn" role="button" tabindex="0" aria-label="Включить/выключить звук" viewBox="0 0 16 16"><path id="mute-icon-path" d="M11 2.5a.5.5 0 0 1 .5.5v10a.5.5 0 0 1-1 0v-10a.5.5 0 0 1 .5-.5zM7 4.5a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0v-6a.5.5 0 0 1 .5-.5zM3 5.5a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 1 .5-.5z"/></svg>
+        <svg id="pause-btn" class="icon-btn" role="button" tabindex="0" aria-label="Пауза/Пуск" viewBox="0 0 16 16"><path id="pause-icon-path" d="M5 3h1v10H5zm5 0h1v10h-1z"/></svg>
+        <svg id="reset-btn" class="icon-btn" role="button" tabindex="0" aria-label="Перезагрузка" viewBox="0 0 16 16"><path d="M13.65 10.35A6 6 0 1 0 12.4 4.35l.95.32a5 5 0 1 1-1.02 5.03l-1.9-1.9a.5.5 0 0 0-.35-.15H6.5a.5.5 0 0 0-.5.5v3.5a.5.5 0 0 0 .5.5h.09a.5.5 0 0 0 .41-.28l1.6-2.56.09.02A6 6 0 0 0 13.65 10.35z"/></svg>
+    </div>
+    <canvas id="main-canvas"></canvas>
+    <div id="ui-panel" class="ui-panel">
+        <div id="ui-toggle">Настройки ⌄</div>
+        <div id="ui-content">
+            <div id="brush-controls" class="control-group">
+                <div class="ui-checkbox"> <input type="checkbox" id="eraser-check"> <label for="eraser-check">Ластик</label> </div>
+                <div> <label for="brush-size-slider">Размер кисти:</label> <input type="range" id="brush-size-slider" min="0" max="20" value="1"> </div>
+                <hr style="border-color: rgba(255,255,255,0.1); margin: 0;">
+            </div>
+            <div id="audio-controls" class="control-group">
+                <div>
+                    <label for="synth-select">Синтезатор:</label>
+                    <select id="synth-select"> <option value="classic">Классический</option> <option value="percussion">Перкуссия</option> <option value="harps">Арфы</option> </select>
+                </div>
+                <div> <label for="volume-slider">Общая громкость:</label> <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.4"> </div>
+                <hr style="border-color: rgba(255,255,255,0.1); margin: 0;">
+            </div>
+            
+            <div> <label for="mode-select">Режим симуляции:</label> 
+                <select id="mode-select"> 
+                    <option value="classic">Классика/Поколения</option> 
+                    <option value="smooth">Плавная Жизнь</option> 
+                    <option value="resources">Жизнь и Ресурсы</option> 
+                    <option value="cyclic">Циклический (К-Н-Б)</option>
+                    <option value="ant">Термиты (Муравей)</option>
+                    <option value="boids">Стая (Boids)</option>
+                </select> 
+            </div>
+            
+            <div id="classic-controls" class="control-group">
+                <div> <label for="rules-select">Правила:</label> <select id="rules-select"></select> </div>
+                <div> <label for="fade-select">Затухание:</label> <select id="fade-select"> <option value="none">Нет</option> <option value="visual" selected>Визуальное</option> <option value="physical">Физическое</option> </select> </div>
+                <div class="ui-checkbox"> <input type="checkbox" id="von-neumann-check"> <label for="von-neumann-check">Мир фон Неймана</label> </div>
+                <div class="ui-checkbox"> <input type="checkbox" id="generations-check"> <label for="generations-check">Режим "Поколения"</label> </div>
+                <div class="ui-checkbox"> <input type="checkbox" id="probabilistic-check"> <label for="probabilistic-check">Вероятностная</label> </div>
+                <hr style="border-color: rgba(255,255,255,0.1); margin: 0;">
+                <div class="ui-checkbox"> <input type="checkbox" id="render-glow-check"> <label for="render-glow-check">Эффект свечения</label> </div>
+                <div class="ui-checkbox"> <input type="checkbox" id="render-circles-check"> <label for="render-circles-check">Круглые клетки</label> </div>
+            </div>
+
+            <div id="smooth-controls" class="control-group"> 
+                <div> 
+                    <label for="smooth-preset-select">Законы физики:</label> 
+                    <select id="smooth-preset-select"></select> 
+                </div> 
+                <div>
+                    <label for="smooth-color-select">Цветовая тема:</label>
+                    <select id="smooth-color-select">
+                        <option value="cyan" selected>Циан</option>
+                        <option value="magma">Магма</option>
+                        <option value="forest">Лес</option>
+                        <option value="psychedelic">Психоделика</option>
+                    </select>
+                </div>
+                <div class="ui-checkbox"> 
+                    <input type="checkbox" id="smooth-von-neumann-check"> 
+                    <label for="smooth-von-neumann-check">Мир фон Неймана</label> 
+                </div>
+            </div>
+
+            <div id="smooth-custom-controls" class="control-group" style="display: none;">
+                <hr style="border-color: rgba(255,255,255,0.1); margin: 0;">
+                <label>Свои законы физики:</label>
+                <div><label for="smooth-b1-slider">Рождение (min):</label><input type="range" id="smooth-b1-slider" min="0.0" max="1.0" step="0.001"></div>
+                <div><label for="smooth-b2-slider">Рождение (max):</label><input type="range" id="smooth-b2-slider" min="0.0" max="1.0" step="0.001"></div>
+                <div><label for="smooth-s1-slider">Выживание (min):</label><input type="range" id="smooth-s1-slider" min="0.0" max="1.0" step="0.001"></div>
+                <div><label for="smooth-s2-slider">Выживание (max):</label><input type="range" id="smooth-s2-slider" min="0.0" max="1.0" step="0.001"></div>
+                <div><label for="smooth-dt-slider">Скорость реакции:</label><input type="range" id="smooth-dt-slider" min="0.01" max="0.2" step="0.001"></div>
+            </div>
+
+            <div id="cyclic-controls" class="control-group">
+                <div> <label for="cyclic-states-slider">Число состояний:</label> <input type="range" id="cyclic-states-slider" min="3" max="16" value="8"> </div>
+                <div> <label for="cyclic-threshold-slider">Порог захвата:</label> <input type="range" id="cyclic-threshold-slider" min="1" max="8" value="3"> </div>
+            </div>
+             <div id="ant-controls" class="control-group">
+                <div> <label for="ant-count-slider">Число термитов:</label> <input type="range" id="ant-count-slider" min="1" max="100" value="3"> </div>
+            </div>
+            <div id="boids-controls" class="control-group">
+                 <div> <label for="boids-count-slider">Число агентов:</label> <input type="range" id="boids-count-slider" min="10" max="500" value="150"> </div>
+                 <div> <label for="boids-align-slider">Выравнивание:</label> <input type="range" id="boids-align-slider" min="0" max="2" step="0.1" value="1.0"> </div>
+                 <div> <label for="boids-cohesion-slider">Сближение:</label> <input type="range" id="boids-cohesion-slider" min="0" max="2" step="0.1" value="1.0"> </div>
+                 <div> <label for="boids-separation-slider">Разделение:</label> <input type="range" id="boids-separation-slider" min="0" max="2" step="0.1" value="1.5"> </div>
+            </div>
+            
+            <div id="global-controls" class="control-group">
+                <hr style="border-color: rgba(255,255,255,0.1); margin: 0;">
+                <div class="ui-checkbox"> <input type="checkbox" id="wrap-check" checked> <label for="wrap-check">Замкнутый мир</label> </div>
+                <div> <label for="speed-slider">Скорость:</label> <input type="range" id="speed-slider" min="0" max="184" value="100"> </div>
+            </div>
+        </div>
+    </div>
+    <div id="controls-hint">Тач/ЛКМ+drag — рисовать</div>
+
+    <!-- Scripts -->
+    <script src="js/utils/utils.js" defer></script>
+    <script src="js/audio/audio_core.js" defer></script>
+    <script src="js/renderers/render_squares.js" defer></script>
+    <script src="js/modes/mode_classic.js" defer></script>
+    <script src="js/modes/mode_smooth.js" defer></script>
+    <script src="js/modes/mode_cyclic.js" defer></script>
+    <script src="js/modes/mode_ant.js" defer></script>
+    <script src="js/modes/mode_boids.js" defer></script>
+    <script src="js/main.js" defer></script>
+</body>
+</html>

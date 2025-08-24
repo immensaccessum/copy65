@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="ru">
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Змейка — Copy65</title>
+  <meta name="description" content="Змейка">
+  <meta name="theme-color" content="#e9552a">
+  <link rel="icon" href="../../../assets/img/favicon.svg">
+  <link rel="stylesheet" href="../../../assets/css/styles.css">
+  <meta property="og:title" content="Змейка — Copy65">
+  <meta property="og:description" content="Змейка">
+  <meta property="og:type" content="website">
+  
+  <style>
+    /* Стили игры, адаптированные под темы */
+    .game-wrap {
+      width:100%;
+      max-width:560px;
+      padding:18px 0;
+      display:flex;
+      flex-direction:column;
+      gap:14px; 
+      margin-left: auto; 
+      margin-right: auto;
+    }
+    .panel{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+    .stat{display:flex;gap:16px;align-items:center}
+    .stat span{
+      background:var(--card);
+      border: 1px solid var(--border);
+      border-radius:12px;
+      padding:8px 12px;
+      box-shadow:0 6px 20px rgba(0,0,0,.06);
+      min-width:88px;
+      text-align:center
+    }
+    .btn{appearance:none;border:0;border-radius:12px;padding:10px 14px;background:var(--fg);color:var(--bg);font-weight:600; text-decoration: none; display: inline-block; cursor: pointer;}
+    .btn.brand{background:var(--accent); color: #fff;}
+    canvas{width:100%;height:auto;background:var(--card);border-radius:16px;box-shadow:0 6px 20px rgba(0,0,0,.08); display: block; cursor: pointer; border: 2px solid var(--border); box-sizing: border-box;}
+    .game-footer{color:var(--muted);margin:8px 0 18px;text-align:center}
+  
+    /* D-pad (джойстик) */
+    .controls-wrap{position:relative;width:100%;display:flex;justify-content:center; height: 180px; margin-top: 14px;}
+    .dpad{position:relative;width:150px;height:150px;transform:rotate(45deg);border-radius:24px;box-shadow:0 8px 24px rgba(0,0,0,.08); background: var(--card); border: 1px solid var(--border); touch-action: none;}
+    .dpad-btn{position:absolute;width:50%;height:50%;background: color-mix(in srgb, var(--fg) 5%, transparent);color:var(--muted);font-size:24px;font-weight:bold;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;transition:background .1s ease;}
+    .dpad-btn span{transform: rotate(-45deg);}
+    .dpad-btn.up{top:0;left:0;border-radius:24px 0 0 0;}
+    .dpad-btn.right{top:0;right:0;border-radius:0 24px 0 0;}
+    .dpad-btn.down{bottom:0;right:0;border-radius:0 0 24px 0;}
+    .dpad-btn.left{bottom:0;left:0;border-radius:0 0 0 24px;}
+    .dpad-btn.active, .dpad-btn:active{background: color-mix(in srgb, var(--fg) 12%, transparent);}
+    @media (max-width:480px){
+      .controls-wrap{height:160px;}
+      .dpad{width:130px;height:130px;}
+    }
+  </style>
+
+</head>
+<body data-slug="guides/games/snake" data-depth="3">
+  <header id="site-header"></header>
+  <main class="container">
+    <h1>Змейка</h1>
+    
+    <div class="game-wrap">
+      <div class="panel">
+        <div class="stat">
+          <span>Очки: <b id="score">0</b></span>
+          <span>Рекорд: <b id="best">0</b></span>
+        </div>
+        <div class="btns">
+          <button class="btn brand" id="new">Новая</button>
+          <button class="btn" id="pause">Пауза</button>
+        </div>
+      </div>
+    
+      <canvas id="game" width="560" height="560" aria-label="Поле игры змейка"></canvas>
+    
+      <div class="controls-wrap">
+        <div class="dpad" id="dpad">
+          <div class="dpad-btn up" data-dir="up"><span>↑</span></div>
+          <div class="dpad-btn right" data-dir="right"><span>→</span></div>
+          <div class="dpad-btn down" data-dir="down"><span>↓</span></div>
+          <div class="dpad-btn left" data-dir="left"><span>←</span></div>
+        </div>
+      </div>
+    
+      <footer class="game-footer">Управление: клавиатура, D-pad, свайп по полю.</footer>
+    </div>
+
+  </main>
+  <footer id="site-footer"></footer>
+  
+  <script>
+  (()=>{
+    // === параметры ===
+    const GRID = 20;
+    const SPEED = 5; // клеток/сек
+    const BRAND = '#e9552a';
+
+    // === канвас HiDPI ===
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+
+    function fitCanvas(){
+      const ratio = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+      const parentWidth = canvas.parentElement.clientWidth;
+      const sizeCSS = Math.min(560, parentWidth);
+      canvas.style.width = canvas.style.height = sizeCSS + 'px';
+      const px = Math.floor(sizeCSS / GRID);
+      canvas.width = px * GRID * ratio;
+      canvas.height = px * GRID * ratio;
+      ctx.setTransform(ratio,0,0,ratio,0,0);
+      return px;
+    }
+    let CELL = fitCanvas();
+    window.addEventListener('resize', ()=>{ CELL = fitCanvas(); draw(); });
+  
+    // === состояние ===
+    let snake, dir, nextDir, food, score, best=0, dead=false, paused=false;
+    function reset(){
+      snake = [{x:Math.floor(GRID/2), y:Math.floor(GRID/2)}];
+      dir = {x:1, y:0}; nextDir = {x:1, y:0};
+      placeFood();
+      score = 0; dead = false; paused = false;
+      updateUI();
+    }
+    function updateUI(){
+      document.getElementById('score').textContent = score;
+      document.getElementById('best').textContent = best;
+      document.getElementById('pause').textContent = paused ? 'Продолжить' : 'Пауза';
+    }
+    function placeFood(){
+      do{ food = {x: (Math.random()*GRID)|0, y: (Math.random()*GRID)|0}; }
+      while(snake.some(p=>p.x===food.x && p.y===food.y));
+    }
+  
+    // === управление ===
+    function setDir(dx,dy){
+      if (dead) return;
+      if (dx === -dir.x && dy === -dir.y) return; // без разворота на 180°
+      nextDir = {x:dx, y:dy};
+    }
+    // Клавиатура
+    window.addEventListener('keydown', e=>{
+      const k=e.key.toLowerCase();
+      if (['arrowup', 'w', 'arrowdown', 's', 'arrowleft', 'a', 'arrowright', 'd', ' '].includes(k)) {
+        e.preventDefault();
+      }
+      if (k==='arrowup'||k==='w') setDir(0,-1);
+      else if (k==='arrowdown'||k==='s') setDir(0,1);
+      else if (k==='arrowleft'||k==='a') setDir(-1,0);
+      else if (k==='arrowright'||k==='d') setDir(1,0);
+      else if (k===' ') {
+        if (dead) reset();
+        else togglePause();
+      }
+    });
+
+    // Кнопки
+    document.getElementById('new').onclick = reset;
+    function togglePause(){ if (!dead) { paused=!paused; updateUI(); } }
+    document.getElementById('pause').onclick = togglePause;
+
+    // Рестарт по клику на поле после проигрыша
+    canvas.addEventListener('click', () => { if (dead) reset(); });
+  
+    // Свайпы по полю
+    let touchStart=null;
+    canvas.addEventListener('touchstart', e=>{
+      const t=e.changedTouches[0]; touchStart={x:t.clientX,y:t.clientY}; e.preventDefault();
+    }, {passive:false});
+    canvas.addEventListener('touchend', e=>{
+      if(!touchStart) return;
+      const t=e.changedTouches[0]; 
+      const dx=t.clientX-touchStart.x, dy=t.clientY-touchStart.y;
+      const dist = Math.hypot(dx, dy);
+
+      if (dead) {
+        if (dist < 18) reset(); // Рестарт по тапу
+      } else {
+        if (dist >= 18) { // Смена направления по свайпу
+          if (Math.abs(dx) > Math.abs(dy)) setDir(dx>0?1:-1,0); 
+          else setDir(0,dy>0?1:-1);
+        }
+      }
+      touchStart=null;
+    });
+
+    // === D-pad ===
+    const dpad = document.getElementById('dpad');
+    let dpadActive = false;
+    let lastDpadDir = null;
+    let currentActiveBtn = null;
+
+    function handleDpadMove(x, y) {
+      if (!dpadActive) return;
+      const elem = document.elementFromPoint(x, y);
+      const btn = elem ? elem.closest('.dpad-btn') : null;
+      
+      if (currentActiveBtn) currentActiveBtn.classList.remove('active');
+      currentActiveBtn = btn;
+      if (currentActiveBtn) currentActiveBtn.classList.add('active');
+      
+      const direction = btn ? btn.dataset.dir : null;
+
+      if (direction && direction !== lastDpadDir) {
+        lastDpadDir = direction;
+        switch (direction) {
+          case 'up':    setDir(0, -1); break;
+          case 'down':  setDir(0, 1);  break;
+          case 'left':  setDir(-1, 0); break;
+          case 'right': setDir(1, 0);  break;
+        }
+      }
+    }
+    function dpadEnd() {
+      dpadActive = false;
+      lastDpadDir = null;
+      if (currentActiveBtn) {
+        currentActiveBtn.classList.remove('active');
+        currentActiveBtn = null;
+      }
+    }
+    dpad.addEventListener('touchstart', e => { e.preventDefault(); dpadActive = true; const t = e.changedTouches[0]; handleDpadMove(t.clientX, t.clientY); }, {passive: false});
+    dpad.addEventListener('touchmove', e => { e.preventDefault(); const t = e.changedTouches[0]; handleDpadMove(t.clientX, t.clientY); }, {passive: false});
+    dpad.addEventListener('touchend', dpadEnd);
+    dpad.addEventListener('touchcancel', dpadEnd);
+    dpad.addEventListener('mousedown', e => { dpadActive = true; handleDpadMove(e.clientX, e.clientY); });
+    window.addEventListener('mousemove', e => { if (dpadActive) handleDpadMove(e.clientX, e.clientY); });
+    window.addEventListener('mouseup', dpadEnd);
+
+    // === цикл ===
+    let last=0, acc=0, step=1000/SPEED;
+    function loop(ts){
+      const dt=ts-last; last=ts; if(!paused) acc+=dt;
+      while(acc>=step){ tick(); acc-=step; }
+      draw();
+      requestAnimationFrame(loop);
+    }
+    function tick(){
+      if(dead) return;
+      dir = nextDir;
+      const head = {x:snake[0].x + dir.x, y:snake[0].y + dir.y};
+      if(head.x<0||head.y<0||head.x>=GRID||head.y>=GRID){ dead=true; best=Math.max(best,score); updateUI(); return; }
+      if(snake.some(p=>p.x===head.x&&p.y===head.y)){ dead=true; best=Math.max(best,score); updateUI(); return; }
+      snake.unshift(head);
+      if(head.x===food.x && head.y===food.y){ score++; placeFood(); updateUI(); }
+      else { snake.pop(); }
+    }
+    function draw(){
+      const isDark = getComputedStyle(document.body).getPropertyValue('color-scheme') === 'dark';
+      
+      // Определяем цвета в зависимости от темы
+      const bgColor = isDark ? '#151515' : '#ffffff';
+      const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+      const snakeHeadColor = isDark ? '#e6e6e6' : '#222';
+      const snakeBodyColor = isDark ? '#a1a1a1' : '#444';
+
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.strokeStyle = gridColor;
+      ctx.lineWidth=1;
+      for(let i=1;i<GRID;i++){ ctx.beginPath(); ctx.moveTo(i*CELL,0); ctx.lineTo(i*CELL,GRID*CELL); ctx.stroke();
+                               ctx.beginPath(); ctx.moveTo(0,i*CELL); ctx.lineTo(GRID*CELL,i*CELL); ctx.stroke(); }
+      // еда
+      ctx.fillStyle = BRAND;
+      ctx.fillRect(food.x*CELL+2, food.y*CELL+2, CELL-4, CELL-4);
+      // змейка
+      for(let i=0;i<snake.length;i++){
+        const p = snake[i];
+        ctx.fillStyle = i===0 ? snakeHeadColor : snakeBodyColor;
+        ctx.beginPath();
+        ctx.arc(p.x*CELL+CELL/2, p.y*CELL+CELL/2, CELL/2-4, 0, Math.PI*2);
+        ctx.fill();
+      }
+      if(dead){
+        ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0,0,GRID*CELL,GRID*CELL);
+        ctx.fillStyle = '#fff'; ctx.textAlign='center';
+        ctx.font = 'bold 24px system-ui, Arial'; ctx.fillText('Игра окончена', GRID*CELL/2, GRID*CELL/2-10);
+        ctx.font = '16px system-ui, Arial'; ctx.fillText('Нажмите пробел или поле для рестарта', GRID*CELL/2, GRID*CELL/2+18);
+      }
+    }
+  
+    reset();
+    requestAnimationFrame(ts=>{ last=ts; requestAnimationFrame(loop); });
+  })();
+  </script>
+  <script src="../../../assets/js/site.js"></script>
+</body>
+</html>
