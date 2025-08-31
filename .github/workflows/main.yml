@@ -1,32 +1,24 @@
-# Название рабочего процесса
 name: Deploy to Hosting
 
-# Триггер: запускать при любом push в ветку 'main'
 on:
   push:
     branches:
       - main
 
-# Задачи, которые нужно выполнить
 jobs:
   ftp-deploy:
     name: FTP Deploy
-    # Запускаем на последней версии Ubuntu
     runs-on: ubuntu-latest
     
     steps:
-    # 1. Получаем код из репозитория
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # 2. Выгружаем файлы на хостинг по FTP
     - name: Deploy to FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
-        # Данные из секретов, которые мы создали
         server: ${{ secrets.FTP_SERVER }}
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
         
-        # ВАШ ПРАВИЛЬНЫЙ ПУТЬ К ПАПКЕ САЙТА
         server-dir: ./www/copy65.ru/

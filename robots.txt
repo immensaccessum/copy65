@@ -1,2 +1,14 @@
 User-agent: *
-Disallow: /
+# Разрешаем всё по-умолчанию
+Allow: /
+
+# Запрещаем страницы-заглушки
+Disallow: /souvenirs/
+Disallow: /guides/rentals/
+Disallow: /guides/tourist-info/
+
+# Запрещаем служебные директории
+Disallow: /.github/
+
+# Указываем путь к карте сайта
+Sitemap: https://copy65.ru/sitemap.xml
